@@ -8,7 +8,7 @@ from threading import Thread
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
-        client, client_address = SERVER.accept()
+        client, client_address = server.accept()
         print("%s:%s has connected." % client_address)
         client.send(bytes("Greetings from the cave! Now type your name and press enter!"))
         addresses[client] = client_address
