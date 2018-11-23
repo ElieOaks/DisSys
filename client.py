@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Script for Tkinter GUI chat client."""
-from socket import AF_INET, socket, SOCK_STREAM
+import socket as sock
 from threading import Thread
 try:
     import tkinter
@@ -12,26 +12,34 @@ def receive():
     while True:
         try:
             msg = client_socket.recv(BUFSIZ).decode("utf8")
-            msg_list.insert(tkinter.END, msg)
+            print(str(msg))
+            #msg_list.insert(tkinter.END, msg)
         except OSError:  # Possibly client has left the chat.
             break
+        except KeyboardInterrupt:
+            exit()
 
 
-def send(event=None):  # event is passed by binders.
+def send():
     """Handles sending of messages."""
-    msg = my_msg.get()
-    my_msg.set("")  # Clears input field.
-    client_socket.send(bytes(msg))
-    if msg == "{quit}":
-        client_socket.close()
-        top.quit()
+    while True:
+        msg = input("Your message: ")
+        #msg = my_msg.get()
+        #my_msg.set("")  # Clears input field.
+        client_socket.send(bytes(msg))
+        if msg == "q":
+            client_socket.close()
+            #top.quit()
 
-
+"""  
 def on_closing(event=None):
-    """This function is to be called when the window is closed."""
+    #This function is to be called when the window is closed.
     my_msg.set("{quit}")
     send()
+"""
 
+
+""" 
 top = tkinter.Tk()
 top.title("Chatter")
 
@@ -53,6 +61,7 @@ send_button = tkinter.Button(top, text="Send", command=send)
 send_button.pack()
 
 top.protocol("WM_DELETE_WINDOW", on_closing)
+"""
 
 #----Now comes the sockets part----
 HOST = '127.0.0.1'  # input('Enter host: ')
@@ -65,9 +74,11 @@ else:
 BUFSIZ = 1024
 ADDR = (HOST, PORT)
 
-client_socket = socket(AF_INET, SOCK_STREAM)
+client_socket = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+client_socket.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
 client_socket.connect(ADDR)
 
 receive_thread = Thread(target=receive)
+send_thread = Thread(target=send)
+send_thread.start()
 receive_thread.start()
-tkinter.mainloop()  # Starts GUI execution.
