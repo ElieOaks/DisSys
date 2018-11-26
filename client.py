@@ -26,7 +26,7 @@ def send():
         msg = input("Your message: ")
         #msg = my_msg.get()
         #my_msg.set("")  # Clears input field.
-        client_socket.send(bytes(msg))
+        client_socket.sendall(b""+msg)
         if msg == "q":
             client_socket.close()
             #top.quit()
@@ -64,12 +64,8 @@ top.protocol("WM_DELETE_WINDOW", on_closing)
 """
 
 #----Now comes the sockets part----
-HOST = '127.0.0.1'  # input('Enter host: ')
-PORT = 33000 #input('Enter port: ')
-if not PORT:
-    PORT = 33000
-else:
-    PORT = int(PORT)
+HOST = '127.0.0.1'
+PORT = 33001
 
 BUFSIZ = 1024
 ADDR = (HOST, PORT)

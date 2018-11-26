@@ -41,22 +41,23 @@ def broadcast(msg, prefix=""):  # prefix is for name identification.
     """Broadcasts a message to all the clients."""
 
     for sock in clients:
-        sock.send(bytes(prefix)+msg)
+        sock.send(bytes(prefix+msg))
 
         
 clients = {}
 addresses = {}
 
 HOST = '127.0.0.1'
-PORT = 33000
+PORT = 33001
 BUFSIZ = 1024
 ADDR = (HOST, PORT)
 
-with sock.socket(sock.AF_INET, sock.SOCK_STREAM) as server:
-        server.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-        server.bind(ADDR)
-        server.listen(5)
-        print("Waiting for connection...")
-        ACCEPT_THREAD = Thread(target=accept_incoming_connections)
-        ACCEPT_THREAD.start()
-        ACCEPT_THREAD.join()
+server = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+server.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+server.bind(ADDR)
+server.listen(5)
+print("Waiting for connection...")
+ACCEPT_THREAD = Thread(target=accept_incoming_connections)
+ACCEPT_THREAD.start()
+ACCEPT_THREAD.join()
+server.close()
