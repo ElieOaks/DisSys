@@ -12,13 +12,13 @@ class Client:
     def login(username, password):
         return 0
 
-    #creates object text and adds it to the text_messages which is the cyrrent conversation
+    #creates object text and adds it to the text_messages which is the current conversation
     def send_message(self, message, recipient):
         from_user = self.ID
         self.text_thread.add_message(message, from_user, recipient, 0)
         return 0
 
-    #creates object text and adds it to the text_messages which is the cyrrent conversation
+    #creates object text and adds it to the text_messages which is the current conversation
     def recieved_message(self, cipher_text, sender):
         message = cipher_text
         self.text_thread.add_message(message, sender, self.ID, 0)
@@ -76,6 +76,7 @@ class Client:
         
     def eventloop(incoming_event):
         return 0
+
 
 #small program to test stuff out
 def main():

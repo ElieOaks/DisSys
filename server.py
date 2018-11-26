@@ -8,12 +8,14 @@ from threading import Thread
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
-        client, client_address = SERVER.accept()
-        print("%s:%s has connected." % client_address)
-        client.send(bytes("Welcome to the Sexy Peple Talk"))
-        addresses[client] = client_address
-        Thread(target=handle_client, args=(client,)).start()
-
+        try:
+                client, client_address = SERVER.accept()
+                print("%s:%s has connected." % client_address)
+                client.send(bytes("Welcome to the Sexy Peple Talk, input your name:"))
+                addresses[client] = client_address
+                Thread(target=handle_client, args=(client,)).start()
+        except KeyboardInterrupt:
+                return
 #Individual function that handles a connection. First takes the nick of client and broadcasts all messages.
 def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
@@ -34,7 +36,7 @@ def handle_client(client):  # Takes client socket as argument.
             client.close()
             del clients[client]
             broadcast(bytes("%s has left the chat." % name))
-            break
+            return
 
 # Broadscast function
 def broadcast(msg, prefix=""):  # prefix is for name identification.
@@ -56,6 +58,7 @@ SERVER = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 SERVER.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
 SERVER.bind(ADDR)
 SERVER.listen(5)
+print(sock.gethostbyname(sock.gethostname()))
 print("Waiting for connection...")
 ACCEPT_THREAD = Thread(target=accept_incoming_connections)
 ACCEPT_THREAD.start()
