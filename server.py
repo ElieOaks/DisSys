@@ -1,29 +1,63 @@
-##Server
+#!/usr/bin/env python3
+"""Server for multithreaded (asynchronous) chat application."""
+import socket as sock
+from threading import Thread
 
 
-"""
-This is the server
+#Function that starts a new thread for every new connection.
+def accept_incoming_connections():
+    """Sets up handling for incoming clients."""
+    while True:
+        client, client_address = SERVER.accept()
+        print("%s:%s has connected." % client_address)
+        client.send(bytes("Welcome to the Sexy Peple Talk"))
+        addresses[client] = client_address
+        Thread(target=handle_client, args=(client,)).start()
 
-"""
-class Server:
+#Individual function that handles a connection. First takes the nick of client and broadcasts all messages.
+def handle_client(client):  # Takes client socket as argument.
+    """Handles a single client connection."""
 
-    list_of_clients = []
-    list_of_connected_clients = []
-    
+    name = client.recv(BUFSIZ).decode("utf8")
+    welcome = 'Welcome %s! If you ever want to quit (unlikely), type q to exit.' % name
+    client.send(bytes(welcome   ))
+    msg = "%s has joined the chat!" % name
+    broadcast(bytes(msg))
+    clients[client] = name
 
-    def give_me_IP(user_name):
-        return 0
+    while True:
+        msg = client.recv(BUFSIZ)
+        if msg != bytes("q"):
+            broadcast(msg, name+": ")
+        else:
+            client.send(bytes("q"))
+            client.close()
+            del clients[client]
+            broadcast(bytes("%s has left the chat." % name))
+            break
 
-    def give_me_public_key(user_name):
-        return 0
+# Broadscast function
+def broadcast(msg, prefix=""):  # prefix is for name identification.
+    """Broadcasts a message to all the clients."""
 
-    def store_outgoing_messages(message, to_user, from_user):
-        return 0
+    for sock in clients:
+        sock.send(bytes(prefix+msg))
 
-    def update_my_IP(user, new_IP):
-        return 0
+        
+clients = {}
+addresses = {}
 
-    def event_loop(incoming_event, from_user):
-        return 0
+HOST = ''
+PORT = 33001
+BUFSIZ = 1024
+ADDR = (HOST, PORT)
 
-
+SERVER = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+SERVER.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+SERVER.bind(ADDR)
+SERVER.listen(5)
+print("Waiting for connection...")
+ACCEPT_THREAD = Thread(target=accept_incoming_connections)
+ACCEPT_THREAD.start()
+ACCEPT_THREAD.join()
+SERVER.close()
