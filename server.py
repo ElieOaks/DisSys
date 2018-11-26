@@ -8,9 +8,9 @@ from threading import Thread
 def accept_incoming_connections():
     """Sets up handling for incoming clients."""
     while True:
-        client, client_address = server.accept()
+        client, client_address = SERVER.accept()
         print("%s:%s has connected." % client_address)
-        client.send(bytes("Greetings from the cave! Now type your name and press enter!"))
+        client.send(bytes("Welcome to the Sexy Peple Talk"))
         addresses[client] = client_address
         Thread(target=handle_client, args=(client,)).start()
 
@@ -19,7 +19,7 @@ def handle_client(client):  # Takes client socket as argument.
     """Handles a single client connection."""
 
     name = client.recv(BUFSIZ).decode("utf8")
-    welcome = 'Welcome %s! If you ever want to quit, type q to exit.' % name
+    welcome = 'Welcome %s! If you ever want to quit (unlikely), type q to exit.' % name
     client.send(bytes(welcome   ))
     msg = "%s has joined the chat!" % name
     broadcast(bytes(msg))
@@ -47,17 +47,17 @@ def broadcast(msg, prefix=""):  # prefix is for name identification.
 clients = {}
 addresses = {}
 
-HOST = '127.0.0.1'
+HOST = ''
 PORT = 33001
 BUFSIZ = 1024
 ADDR = (HOST, PORT)
 
-server = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
-server.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-server.bind(ADDR)
-server.listen(5)
+SERVER = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+SERVER.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+SERVER.bind(ADDR)
+SERVER.listen(5)
 print("Waiting for connection...")
 ACCEPT_THREAD = Thread(target=accept_incoming_connections)
 ACCEPT_THREAD.start()
 ACCEPT_THREAD.join()
-server.close()
+SERVER.close()
