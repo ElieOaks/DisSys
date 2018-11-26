@@ -8,7 +8,7 @@ This is the server
 class Server:
 
     list_of_clients = []
-    
+    list_of_connected_clients = []
     
 
     def give_me_IP(user_name):
