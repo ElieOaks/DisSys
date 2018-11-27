@@ -1,4 +1,5 @@
 ##Class for a node
+import socket
 import text_messages as mes
 
 class Client:
@@ -78,7 +79,7 @@ class Client:
         return 0
 
 #small program to test stuff out
-def main():
+"""def main():
     person = raw_input('Enter your username: ')
 
     do = Client(None, None, None)
@@ -93,7 +94,18 @@ def main():
 
     do.loggout()
     
-    print("Thank you " + person + " for using Sexy People Talk, where all sexy people can talk!")
+    print("Thank you " + person + " for using Sexy People Talk, where all sexy people can talk!")"""
+
+def main():
+
+    s = socket.socket()        # Create a socket object
+    host = socket.gethostname() # Get local machine name
+    print host
+    port = 12342               # Reserve a port for your service.
+
+    s.connect((host, port))
+    print s.recv(1024)
+    s.close                     # Close the socket when done
     
 
 
