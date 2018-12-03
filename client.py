@@ -40,7 +40,7 @@ class Client:
 		# Start an accept thread for incoming peers
 		ACCEPT_SOCKET = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		ACCEPT_SOCKET.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-		ACCEPT_SOCKET.bind((HOST, INC_PORT))
+		ACCEPT_SOCKET.bind((self.HOST, self.INC_PORT))
 		ACCEPT_SOCKET.listen(5)
 		print("Waiting for connection...")
 		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections_client, args=(ACCEPT_SOCKET,))
@@ -124,15 +124,34 @@ class Client:
 		while True:
 			try:
 				# Accepts incoming connection and adds it to peer list
-				peer_socket, peer_address = bootstrap_socket.accept()
+				peer_socket, peer_address = incoming_socket.accept()
 				nick = self.get_nick(peer_socket)
 				print("%s:%s has connected" % peer_address)
 				print("Nick: %s" % nick)
 				self.peer_list[nick] = (peer_address, peer_socket)
 				# Starts a handler for new peer
-				Thread(target=self.handle_peer_bootstrap, args=(nick,)).start()
+				Thread(target=self.handle_peer_client, args=(nick,)).start()
 			except KeyboardInterrupt:
 				return	
+	
+	def get_nick(self, peer_socket):
+		while True:
+			try:
+				msg = peer_socket.recv(self.BUFSIZ)
+				flag = msg[0:1].decode()
+				content = msg[1:].decode()
+
+				if flag == 'n':
+					return content
+				elif flag == 'g':
+					peer_socket.sendall(b''+self.NICK)
+				else:
+					peer_socket.sendall(b'g')
+			except KeyboardInterrupt:
+				peer_socket.close()
+				return
+			except:
+				return "Error"
 
 	def print_peer_list(self):
 		for peer in self.peer_list:
