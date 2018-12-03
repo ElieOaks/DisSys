@@ -73,9 +73,9 @@ class Bootstrap:
 		while True:
 			try:
 				# Decoding the message
-				msg = peer_socket.recv(self.BUFSIZ)
-				flag = msg[:1].decode()
-				content = msg[1:].decode()
+				message = peer_socket.recv(self.BUFSIZ)
+				flag = message[:1].decode()
+				content = message[1:].decode()
 
 				if flag == 'u':	
 					for peer in self.peer_list:
@@ -83,9 +83,11 @@ class Bootstrap:
 						peer_socket.send(bytes(('p' + bytes((nick, self.get_ip(peer))))))
 				# Accept incoming peer info
 				if flag == 'p':
-					print("Accepting peer %s" % content)
-					(inc_nick, ip) = eval(content)
-					self.peer_list[inc_nick] = (ip, None)
+					peers = self.split_peers(message)
+					for peer in peers:
+						print("Accepting peer %s" % peer)
+						(inc_nick, ip) = eval(content)
+						self.peer_list[inc_nick] = (ip, None)
 				# Send back nick
 				if flag == 'g':
 					print("Sending nick")
@@ -95,6 +97,12 @@ class Bootstrap:
 					return
 			except KeyboardInterrupt:
 				return
+
+	def split_peers(self, messages):
+		payload = [messages.split('p(')]
+		for peer in payload:
+			peer.prepend('(')
+		return payload
 
 	def get_socket(self, nick):
 		(_, socket) = self.peer_list[nick]
