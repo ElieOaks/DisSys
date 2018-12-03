@@ -11,37 +11,40 @@ class Client:
 	PORT = 33000
 	BUFSIZ = 1024
 	ADDR = (HOST, PORT)
+	IS_BOOTSTRAP = False
 
 	# Dictionary with nick as key, references IP and socket (if no connection established, socket is None)
 	peer_list = {}
 
 	def __init__(self):
-		self.peer_list['bootstrap'] = ('130.243.177.171', None)
-		NICK = raw_input("What is your nick?")
-		# Initate contact with the bootstrap, send nick, and add to lists
-		self.connect_to_peer('bootstrap')
-
-		# Start a menu thread for client
-		MENU_THREAD = Thread(target=self.client_menu)
-		MENU_THREAD.daemon = True
-		MENU_THREAD.start()
 
 		# Start an accept thread for incoming peers
-		print("Waiting for connection...")
-		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections_client)
+		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
 		ACCEPT_THREAD.daemon = True
 		ACCEPT_THREAD.start()
 
-		# Wait for menu thread, then close
-		MENU_THREAD.join()
+		if self.IS_BOOTSTRAP:
+			self.NICK = 'bootstrap'
+		else:
+			self.peer_list['bootstrap'] = ('130.243.177.171', None)
+			NICK = raw_input("What is your nick?")
+			# Initate contact with the bootstrap, send nick, and add to lists
+			self.connect_to_peer('bootstrap')
+
+			# Start a menu thread for client
+			MENU_THREAD = Thread(target=self.client_menu)
+			MENU_THREAD.daemon = True
+			MENU_THREAD.start()
+
 
 	#Function that starts a new thread for every new connection.
-	def accept_incoming_connections_client(self):
+	def accept_incoming_connections(self):
 		"""Sets up handling for incoming clients."""
 		ACCEPT_SOCKET = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		ACCEPT_SOCKET.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
 		ACCEPT_SOCKET.bind(self.ADDR)
 		ACCEPT_SOCKET.listen(5)
+		print("Waiting for connection...")
 		while True:
 			try:
 				# Accepts incoming connection and adds it to peer list
@@ -171,4 +174,7 @@ class Client:
 
 
 if __name__ == "__main__":
+	ans = raw_input("Are you bootstrap?")
+	if ans == 'y' or ans == 'Y':
+		self.IS_BOOTSTRAP = True
 	Client()
