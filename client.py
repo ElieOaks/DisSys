@@ -81,9 +81,9 @@ class Client:
 		# Initate contact with the bootstrap, send nick, and add to lists
 		PEER_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		PEER_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-		PEER_CONNECTION.connect(self.get_ip(nick), self.PORT)
+		PEER_CONNECTION.connect((self.get_ip(nick), self.PORT))
 		PEER_CONNECTION.sendall(b'n'+self.NICK)
-		self.peer_list[nick][1] = PEER_CONNECTION
+		self.peer_list[nick] = (self.get_ip(nick), PEER_CONNECTION)
 		print("Connected to %s" % nick)
 
 		# Start a handler thread for peer
@@ -160,8 +160,7 @@ class Client:
 	
 	def get_ip(self, nick):
 		(ip, _) = self.peer_list[nick]
-		(adr, _) = ip
-		return adr
+		return ip
 	
 	def split_peers(self, messages):
 		payload = messages.split('p(')
