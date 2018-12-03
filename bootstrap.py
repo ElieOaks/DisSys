@@ -10,6 +10,7 @@ class Bootstrap:
 	NICK = 'bootstrap'
 	HOST = ''
 	PORT = 33000
+	INC_PORT = 33001
 	BUFSIZ = 1024
 	ADDR = (HOST, PORT)
 	#BOOTSTRAP = None
@@ -25,13 +26,13 @@ class Bootstrap:
 		print("Waiting for connection...")
 
 		# Start the thread which listens for connections
-		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections, args=(BOOTSTRAP,))
+		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections_bootstrap, args=(BOOTSTRAP,))
 		ACCEPT_THREAD.daemon = True
 		ACCEPT_THREAD.start()
 		ACCEPT_THREAD.join()
 
 	#Function that starts a new thread for every new connection.
-	def accept_incoming_connections(self, bootstrap_socket):
+	def accept_incoming_connections_bootstrap(self, bootstrap_socket):
 		"""Sets up handling for incoming clients."""
 		while True:
 			try:
@@ -68,24 +69,23 @@ class Bootstrap:
 
 	def handle_peer_bootstrap(self, nick):
 		#Retreive the socket object via nick
-		(_, peer_socket) = self.peer_list[nick]
+		peer_socket = self.get_socket(nick)
 		while True:
 			try:
 				# Decoding the message
 				msg = peer_socket.recv(self.BUFSIZ)
-				print("Received message %s" % msg)
-				flag = msg[0:1].decode()
+				flag = msg[:1].decode()
 				content = msg[1:].decode()
 
-				# Peer wants to get list of addresses
-				if flag == 'u':
+				if flag == 'u':	
 					for peer in self.peer_list:
 						print("Sending peer: %s" % peer)
-						peer_socket.send(b'p'+ bytes((peer, self.peer_list[peer])))
+						peer_socket.send(bytes(('p' + bytes((nick, self.get_ip(peer))))))
 				# Accept incoming peer info
 				if flag == 'p':
 					print("Accepting peer %s" % content)
-					self.peer_list[nick] = content
+					(inc_nick, ip) = eval(content)
+					self.peer_list[inc_nick] = (ip, None)
 				# Send back nick
 				if flag == 'g':
 					print("Sending nick")
@@ -99,6 +99,11 @@ class Bootstrap:
 	def get_socket(self, nick):
 		(_, socket) = self.peer_list[nick]
 		return socket
+
+	def get_ip(self, nick):
+		(ip, _) = self.peer_list[nick]
+		(adr, _) = ip
+		return adr
 
 
 
