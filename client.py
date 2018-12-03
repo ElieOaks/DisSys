@@ -16,7 +16,7 @@ class Client:
 	# Dictionary with nick as key, references IP and socket (if no connection established, socket is None)
 	peer_list = {}
 
-	def __init__(self):
+	def __init__(self, IS_BOOTSTRAP):
 
 		# Start an accept thread for incoming peers
 		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
@@ -176,5 +176,6 @@ class Client:
 if __name__ == "__main__":
 	ans = raw_input("Are you bootstrap?")
 	if ans == 'y' or ans == 'Y':
-		self.IS_BOOTSTRAP = True
-	Client()
+		Client(True)
+	else:
+		Client(False)
