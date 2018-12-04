@@ -10,6 +10,7 @@ class Bootstrap:
 	NICK = 'bootstrap'
 	HOST = ''
 	PORT = 33000
+	INC_PORT = 33001
 	BUFSIZ = 1024
 	ADDR = (HOST, PORT)
 	#BOOTSTRAP = None
@@ -17,35 +18,35 @@ class Bootstrap:
 	peer_list = {}
 
 	def __init__(self):
-		# Setup bootstrap socket and wait for connections
-		BOOTSTRAP = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
-		BOOTSTRAP.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-		BOOTSTRAP.bind(self.ADDR)
-		BOOTSTRAP.listen(5)
-		print("Waiting for connection...")
-
 		# Start the thread which listens for connections
-		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections, args=(BOOTSTRAP,))
+		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
 		ACCEPT_THREAD.daemon = True
 		ACCEPT_THREAD.start()
 		ACCEPT_THREAD.join()
 
-	#Function that starts a new thread for every new connection.
-	def accept_incoming_connections(self, bootstrap_socket):
+#Function that starts a new thread for every new connection.
+	def accept_incoming_connections(self):
 		"""Sets up handling for incoming clients."""
+		ACCEPT_SOCKET = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+		ACCEPT_SOCKET.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+		ACCEPT_SOCKET.bind(self.ADDR)
+		ACCEPT_SOCKET.listen(5)
+		print("Waiting for connection...")
 		while True:
 			try:
 				# Accepts incoming connection and adds it to peer list
-				peer_socket, peer_address = bootstrap_socket.accept()
+				peer_socket, peer_address = ACCEPT_SOCKET.accept()
 				nick = self.get_nick(peer_socket)
-				print("%s:%s has connected." % peer_address)
+				print("%s:%s has connected" % peer_address)
 				print("Nick: %s" % nick)
 				self.peer_list[nick] = (peer_address, peer_socket)
 				# Starts a handler for new peer
-				Thread(target=self.handle_peer_bootstrap, args=(nick,)).start()
+				Thread(target=self.handle_peer_client, args=(nick,)).start()
 			except KeyboardInterrupt:
+				ACCEPT_SOCKET.close()
 				return
 
+	# Gets the nick
 	def get_nick(self, peer_socket):
 		while True:
 			try:
@@ -64,28 +65,44 @@ class Bootstrap:
 				return
 			except:
 				return "Error"
-		
 
-	def handle_peer_bootstrap(self, nick):
+
+	def connect_to_peer(self, nick):
+		# Initate contact with the bootstrap, send nick, and add to lists
+		PEER_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+		PEER_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+		PEER_CONNECTION.connect((self.get_ip(nick), self.PORT))
+		PEER_CONNECTION.sendall(b'n'+self.NICK)
+		self.peer_list[nick] = (self.get_ip(nick), PEER_CONNECTION)
+		print("Connected to %s" % nick)
+
+		# Start a handler thread for peer
+		HANDLER_THREAD = Thread(target=self.handle_peer_client, args=(nick,))
+		HANDLER_THREAD.daemon = True
+		HANDLER_THREAD.start()
+
+
+	def handle_peer_client(self, nick):
 		#Retreive the socket object via nick
-		(_, peer_socket) = self.peer_list[nick]
+		peer_socket = self.get_socket(nick)
 		while True:
 			try:
 				# Decoding the message
-				msg = peer_socket.recv(self.BUFSIZ)
-				print("Received message %s" % msg)
-				flag = msg[0:1].decode()
-				content = msg[1:].decode()
+				message = peer_socket.recv(self.BUFSIZ)
+				flag = message[:1].decode()
+				content = message[1:].decode()
 
-				# Peer wants to get list of addresses
-				if flag == 'u':
+				if flag == 'u':	
 					for peer in self.peer_list:
 						print("Sending peer: %s" % peer)
-						peer_socket.send(b'p'+ bytes((peer, self.peer_list[peer])))
+						peer_socket.send(bytes(('p' + bytes((nick, self.get_ip(peer))))))
 				# Accept incoming peer info
 				if flag == 'p':
-					print("Accepting peer %s" % content)
-					self.peer_list[nick] = content
+					peers = self.split_peers(message)
+					for peer in peers:
+						(inc_nick, ip) = eval(content)
+						print("Accepting peer: %s at ip: %s" %inc_nick, ip)
+						self.peer_list[inc_nick] = (ip, None)
 				# Send back nick
 				if flag == 'g':
 					print("Sending nick")
@@ -96,9 +113,51 @@ class Bootstrap:
 			except KeyboardInterrupt:
 				return
 
+	def client_menu(self):
+		while True:
+			print("[W]hos online?")
+			print("[U]pdate list")
+			print("[C]onnect to user")
+			print("[Q]uit")
+			ans = raw_input()
+			if ans == 'w' or ans == 'W':
+				self.print_peer_list()
+			if ans =='u' or ans == 'U':
+				try:
+					print("Update in progress...")
+					b_socket = self.get_socket('bootstrap')
+					b_socket.sendall(b'u')
+				except:
+					pass
+
+			if ans == 'c' or ans == 'C':
+				self.print_peer_list()
+				peer = raw_input("Who do you want to chat with?")
+				if peer in self.peer_list:
+					self.connect_to_peer(peer)
+				else:
+					print("User not found")
+			if ans == 'q' or ans == 'Q':
+				return
+
+	def print_peer_list(self):
+		for peer in self.peer_list:
+			print(str(peer))
+	
 	def get_socket(self, nick):
 		(_, socket) = self.peer_list[nick]
 		return socket
+	
+	def get_ip(self, nick):
+		(ip, _) = self.peer_list[nick]
+		return ip
+	
+	def split_peers(self, messages):
+		payload = messages.split('p(')
+		print(str(payload))
+		for peer in payload:
+			peer = '(' + peer
+		return payload
 
 
 

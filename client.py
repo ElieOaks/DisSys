@@ -2,7 +2,7 @@
 """Server for multithreaded (asynchronous) chat application."""
 import socket as sock
 from threading import Thread
-import time
+import time as t
 import sys
 
 class Client:
@@ -11,34 +11,90 @@ class Client:
 	PORT = 33000
 	BUFSIZ = 1024
 	ADDR = (HOST, PORT)
+	IS_BOOTSTRAP = False
 
 	# Dictionary with nick as key, references IP and socket (if no connection established, socket is None)
 	peer_list = {}
 
-	def __init__(self):
-		NICK = raw_input("What is your nick?")
-		
+	def __init__(self, IS_BOOTSTRAP):
+		self.IS_BOOTSTRAP = IS_BOOTSTRAP
+		# Start an accept thread for incoming peers
+		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+		ACCEPT_THREAD.daemon = True
+		ACCEPT_THREAD.start()
+
+		if self.IS_BOOTSTRAP:
+			self.NICK = 'bootstrap'
+		else:
+			self.peer_list['bootstrap'] = ('130.243.177.171', None)
+			NICK = raw_input("What is your nick?")
+			# Initate contact with the bootstrap, send nick, and add to lists
+			self.connect_to_peer('bootstrap')
+
+			# Start a menu thread for client
+			MENU_THREAD = Thread(target=self.client_menu)
+			MENU_THREAD.daemon = True
+			MENU_THREAD.start()
+			
+		ACCEPT_THREAD.join()
+
+
+	#Function that starts a new thread for every new connection.
+	def accept_incoming_connections(self):
+		"""Sets up handling for incoming clients."""
+		ACCEPT_SOCKET = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+		ACCEPT_SOCKET.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+		ACCEPT_SOCKET.bind(self.ADDR)
+		ACCEPT_SOCKET.listen(5)
+		print("Waiting for connection...")
+		while True:
+			try:
+				# Accepts incoming connection and adds it to peer list
+				peer_socket, peer_address = ACCEPT_SOCKET.accept()
+				nick = self.get_nick(peer_socket)
+				print("%s:%s has connected" % peer_address)
+				print("Nick: %s" % nick)
+				self.peer_list[nick] = (peer_address, peer_socket)
+				# Starts a handler for new peer
+				Thread(target=self.handle_peer_client, args=(nick,)).start()
+			except KeyboardInterrupt:
+				ACCEPT_SOCKET.close()
+				return
+
+	# Gets the nick
+	def get_nick(self, peer_socket):
+		while True:
+			try:
+				msg = peer_socket.recv(self.BUFSIZ)
+				flag = msg[0:1].decode()
+				content = msg[1:].decode()
+
+				if flag == 'n':
+					return content
+				elif flag == 'g':
+					peer_socket.sendall(b''+self.NICK)
+				else:
+					peer_socket.sendall(b'g')
+			except KeyboardInterrupt:
+				peer_socket.close()
+				return
+			except:
+				return "Error"
+
+
+	def connect_to_peer(self, nick):
 		# Initate contact with the bootstrap, send nick, and add to lists
-		BOOTSTRAP_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
-		BOOTSTRAP_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-		BOOTSTRAP_CONNECTION.connect(self.ADDR)
-		BOOTSTRAP_CONNECTION.sendall(b'n'+NICK)
-		self.peer_list['bootstrap'] = (self.ADDR, BOOTSTRAP_CONNECTION)
-		print("Connected to bootstrap")
+		PEER_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
+		PEER_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
+		PEER_CONNECTION.connect((self.get_ip(nick), self.PORT))
+		PEER_CONNECTION.sendall(b'n'+self.NICK)
+		self.peer_list[nick] = (self.get_ip(nick), PEER_CONNECTION)
+		print("Connected to %s" % nick)
 
-		# Start a handler thread for bootstrap
-		BOOTSTRAP_THREAD = Thread(target=self.handle_peer_client, args=('bootstrap',))
-		BOOTSTRAP_THREAD.daemon = True
-		BOOTSTRAP_THREAD.start()
-
-		# Start a menu thread for client
-		MENU_THREAD = Thread(target=self.client_menu)
-		MENU_THREAD.daemon = True
-		MENU_THREAD.start()
-
-		# Wait for menu thread, then close
-		MENU_THREAD.join()
-		BOOTSTRAP_CONNECTION.close()
+		# Start a handler thread for peer
+		HANDLER_THREAD = Thread(target=self.handle_peer_client, args=(nick,))
+		HANDLER_THREAD.daemon = True
+		HANDLER_THREAD.start()
 
 
 	def handle_peer_client(self, nick):
@@ -47,19 +103,18 @@ class Client:
 		while True:
 			try:
 				# Decoding the message
-				msg = peer_socket.recv(self.BUFSIZ)
-				flag = msg[0:1].decode()
-				content = msg[1:].decode()
+				message = peer_socket.recv(self.BUFSIZ)
+				flag = message[:1].decode()
+				content = message[1:].decode()
 
-				# Peer wants to get list of addresses
-				if flag == 'u':
+				if flag == 'u':	
 					for peer in self.peer_list:
 						print("Sending peer: %s" % peer)
-						peer_socket.send(b'i'+ bytes((peer, self.peer_list[peer])))
+						peer_socket.send(bytes('p@' + peer + '@' + str(self.get_ip(peer) + '$')))
 				# Accept incoming peer info
 				if flag == 'p':
-					print("Accepting peer %s" % content)
-					self.peer_list[nick] = content
+					peers = self.split_peers(message)
+					print("I accepted stuff: " + content)
 				# Send back nick
 				if flag == 'g':
 					print("Sending nick")
@@ -69,29 +124,57 @@ class Client:
 					return
 			except KeyboardInterrupt:
 				return
+	
+	def split_peers(self, messages):
+		payload = messages.split('p(')
+		print(str(payload))
+		for peer in payload:
+			peer = '(' + peer
+		return payload
 
 	def client_menu(self):
 		while True:
 			print("[W]hos online?")
 			print("[U]pdate list")
+			print("[C]onnect to user")
 			print("[Q]uit")
 			ans = raw_input()
 			if ans == 'w' or ans == 'W':
-				print(str(self.peer_list))
+				self.print_peer_list()
 			if ans =='u' or ans == 'U':
 				try:
 					print("Update in progress...")
 					b_socket = self.get_socket('bootstrap')
-					b_socket.sendall('u')
+					b_socket.sendall(b'u')
 				except:
 					pass
+
+			if ans == 'c' or ans == 'C':
+				self.print_peer_list()
+				peer = raw_input("Who do you want to chat with?")
+				if peer in self.peer_list:
+					self.connect_to_peer(peer)
+				else:
+					print("User not found")
 			if ans == 'q' or ans == 'Q':
 				return
 
+	def print_peer_list(self):
+		print(str(self.peer_list.keys()))
+	
 	def get_socket(self, nick):
 		(_, socket) = self.peer_list[nick]
 		return socket
+	
+	def get_ip(self, nick):
+		(t, _) = self.peer_list[nick]
+		(ip, _) = t
+		return ip
 
 
 if __name__ == "__main__":
-	Client()
+	ans = raw_input("Are you bootstrap?")
+	if ans == 'y' or ans == 'Y':
+		Client(True)
+	else:
+		Client(False)
