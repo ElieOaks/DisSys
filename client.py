@@ -17,7 +17,7 @@ class Client:
 	peer_list = {}
 
 	def __init__(self, IS_BOOTSTRAP):
-
+		self.IS_BOOTSTRAP = IS_BOOTSTRAP
 		# Start an accept thread for incoming peers
 		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
 		ACCEPT_THREAD.daemon = True
@@ -35,6 +35,8 @@ class Client:
 			MENU_THREAD = Thread(target=self.client_menu)
 			MENU_THREAD.daemon = True
 			MENU_THREAD.start()
+			
+		ACCEPT_THREAD.join()
 
 
 	#Function that starts a new thread for every new connection.
@@ -108,14 +110,11 @@ class Client:
 				if flag == 'u':	
 					for peer in self.peer_list:
 						print("Sending peer: %s" % peer)
-						peer_socket.send(bytes(('p' + bytes((nick, self.get_ip(peer))))))
+						peer_socket.send(bytes('p@' + peer + '@' + str(self.get_ip(peer) + '$')))
 				# Accept incoming peer info
 				if flag == 'p':
 					peers = self.split_peers(message)
-					for peer in peers:
-						(inc_nick, ip) = eval(content)
-						print("Accepting peer: %s at ip: %s" %inc_nick, ip)
-						self.peer_list[inc_nick] = (ip, None)
+					print("I accepted stuff: " + content)
 				# Send back nick
 				if flag == 'g':
 					print("Sending nick")
@@ -125,6 +124,13 @@ class Client:
 					return
 			except KeyboardInterrupt:
 				return
+	
+	def split_peers(self, messages):
+		payload = messages.split('p(')
+		print(str(payload))
+		for peer in payload:
+			peer = '(' + peer
+		return payload
 
 	def client_menu(self):
 		while True:
@@ -154,23 +160,16 @@ class Client:
 				return
 
 	def print_peer_list(self):
-		for peer in self.peer_list:
-			print(str(peer))
+		print(str(self.peer_list.keys()))
 	
 	def get_socket(self, nick):
 		(_, socket) = self.peer_list[nick]
 		return socket
 	
 	def get_ip(self, nick):
-		(ip, _) = self.peer_list[nick]
+		(t, _) = self.peer_list[nick]
+		(ip, _) = t
 		return ip
-	
-	def split_peers(self, messages):
-		payload = messages.split('p(')
-		print(str(payload))
-		for peer in payload:
-			peer = '(' + peer
-		return payload
 
 
 if __name__ == "__main__":
