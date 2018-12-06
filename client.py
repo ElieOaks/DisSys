@@ -6,6 +6,7 @@ import time as t
 import sys
 import random
 import pickle
+import menu as men
 
 class Client:
 	NICK = ''
@@ -21,18 +22,19 @@ class Client:
 	def __init__(self, IS_BOOTSTRAP):
 		self.IS_BOOTSTRAP = IS_BOOTSTRAP
 		# Start an accept thread for incoming peers
-		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-		ACCEPT_THREAD.daemon = True
-		ACCEPT_THREAD.start()
+	
 
 		if self.IS_BOOTSTRAP:
 			self.NICK = 'bootstrap'
+                        ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+		        ACCEPT_THREAD.daemon = True
+		        ACCEPT_THREAD.start()
 
 		else:
-			self.peer_list['bootstrap'] = ('', None)
+			self.peer_list['bootstrap'] = ('130.243.177.171', None)
 			self.NICK = raw_input("What is your nick?")
 			# Initate contact with the bootstrap, send nick, and add to lists
-			self.connect_to_peer('bootstrap')
+			#self.connect_to_peer('bootstrap')
 
 			# Start a menu thread for client
 			MENU_THREAD = Thread(target=self.client_menu)
@@ -40,7 +42,7 @@ class Client:
 			MENU_THREAD.start()
 			MENU_THREAD.join()
 			
-		ACCEPT_THREAD.join()
+		#ACCEPT_THREAD.join()
 
 
 	#Function that starts a new thread for every new connection.
@@ -105,10 +107,15 @@ class Client:
 					if entry not in self.peer_list:
 						(peer, address) = entry
 						self.peer_list[peer] = (address, None)
-			
+
+
+        def send_message(self, text, from_nick, to_nick):
+                print("I am sending message: " + text)
 
 	def client_menu(self):
-		while True:
+                self.user = men.User(self.NICK, self)
+                men.main(self.user)
+		"""while True:
 			print("[W]hos online?")
 			print("[U]pdate list")
 			print("[C]onnect to user")
@@ -130,7 +137,7 @@ class Client:
 				else:
 					print("User not found")
 			if ans == 'q' or ans == 'Q':
-				return
+				return"""
 
 	def print_peer_list(self):	
 		print(str(self.peer_list))

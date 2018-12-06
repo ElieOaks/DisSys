@@ -65,8 +65,8 @@ class Menu:
             friend_nick = raw_input("Who do you want to talk to?")
             return self.user.get_conversation(friend_nick)
 
-def loggin(nick, client):
-    us = User(nick, client)
+def loggin(user):
+    us = user
     for files in os.listdir("./conversations"):
         for file in files:
             if file.endswith(us.nick + ".txt"):
@@ -98,9 +98,8 @@ def listen(user):
         
 
 
-def main(client):
-    nick = raw_input("What is your username?")
-    user = loggin(nick, client)
+def main(user):
+    user = loggin(user)
 
     thread2 = threading.Thread(target=listen, args=[user])
     #listen(user)
