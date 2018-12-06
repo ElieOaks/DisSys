@@ -4,13 +4,14 @@ import socket as sock
 from threading import Thread
 import time as t
 import sys
+import json
 
 class Client:
 	NICK = ''
 	HOST = ''
 	PORT = 33000
-	BUFSIZ = 1024
-	ADDR = (HOST, PORT)
+	BUFSIZ = 4096
+	#ADDR = (HOST, PORT)
 	IS_BOOTSTRAP = False
 
 	# Dictionary with nick as key, references IP and socket (if no connection established, socket is None)
@@ -26,7 +27,7 @@ class Client:
 		if self.IS_BOOTSTRAP:
 			self.NICK = 'bootstrap'
 		else:
-			self.peer_list['bootstrap'] = ('130.243.177.171', None)
+			self.peer_list['bootstrap'] = ('', None)
 			NICK = raw_input("What is your nick?")
 			# Initate contact with the bootstrap, send nick, and add to lists
 			self.connect_to_peer('bootstrap')
@@ -44,7 +45,7 @@ class Client:
 		"""Sets up handling for incoming clients."""
 		ACCEPT_SOCKET = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		ACCEPT_SOCKET.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-		ACCEPT_SOCKET.bind(self.ADDR)
+		ACCEPT_SOCKET.bind(self.HOST)
 		ACCEPT_SOCKET.listen(5)
 		print("Waiting for connection...")
 		while True:
@@ -103,18 +104,15 @@ class Client:
 		while True:
 			try:
 				# Decoding the message
-				message = peer_socket.recv(self.BUFSIZ)
-				flag = message[:1].decode()
-				content = message[1:].decode()
+				payload = peer_socket.recv(self.BUFSIZ)
+				(flag, content) = json.loads(payload)
 
 				if flag == 'u':	
-					for peer in self.peer_list:
-						print("Sending peer: %s" % peer)
-						peer_socket.send(bytes('p@' + peer + '@' + str(self.get_ip(peer) + '$')))
-				# Accept incoming peer info
+					data = json.dumps(('p', self.peer_list))
+					peer_socket.sendall(data)
+				# Accept incoming peer list
 				if flag == 'p':
-					peers = self.split_peers(message)
-					print("I accepted stuff: " + content)
+					print("I accepted stuff: ")
 				# Send back nick
 				if flag == 'g':
 					print("Sending nick")
@@ -124,13 +122,6 @@ class Client:
 					return
 			except KeyboardInterrupt:
 				return
-	
-	def split_peers(self, messages):
-		payload = messages.split('p(')
-		print(str(payload))
-		for peer in payload:
-			peer = '(' + peer
-		return payload
 
 	def client_menu(self):
 		while True:
@@ -167,8 +158,7 @@ class Client:
 		return socket
 	
 	def get_ip(self, nick):
-		(t, _) = self.peer_list[nick]
-		(ip, _) = t
+		(ip, _) = self.peer_list[nick]
 		return ip
 
 

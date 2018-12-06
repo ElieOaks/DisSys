@@ -1,0 +1,7 @@
+peer_list[nick] = ip, socket
+
+Client:
+start_connection('bootstrap')
+accept_incoming()
+
+
