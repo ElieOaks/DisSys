@@ -5,37 +5,35 @@ class text_messages:
     def __init__(self, list_of_message):
         self.texts = list_of_message
 
-    def add_message(self, text, from_user, to_user, ID):
-        message = tx.text(text, ID, from_user, to_user)
+    def add_message(self, message, from_nick, to_nick):
+        message = tx.text(message, from_nick, to_nick)
         self.texts.append(message)
-        self.texts.sort
-        return 0
+
+    def add_message_print(self, message, from_nick, to_nick):
+        message = tx.text(message, from_nick, to_nick)
+        self.texts.append(message)
+        message.print_text()
 
     def show_messages(self):
         for text in self.texts:
-            if(not text.seen):
-                print(text.sender),
-                print(": "),
-                print(text.message)
-                text.seen = True
-        return 0
+            text.print_text()
 
-    def show_message(message_ID):
-        return 0
+    def show_last_messages(self):
+        texts = reverse(self.texts)
+        for i in range(0, 10):
+            texts[i].print_text()
 
-    def loggout(self, file):
+    def save_state(self, file):
         for text in self.texts:
-            text.loggout(file)
+            text.save_state(file)
 
-    def loggin(self, fil):
+    def recover_sate(self, fil):
         text = fil.readline()
-
         while(text != ""):
-            for i in range(0, 3):
+            for i in range(0, 2):
                 from_user = fil.readline().rstrip('\n')
                 to_user = fil.readline().rstrip('\n')
-                ID = int(fil.readline().rstrip('\n'))
-                self.add_message(text.rstrip('\n'), from_user, to_user, ID)
+                self.add_message(text.rstrip('\n'), from_user, to_user)
                 text = fil.readline()
                 
         
