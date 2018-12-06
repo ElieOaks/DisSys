@@ -4,7 +4,6 @@ import socket as sock
 from threading import Thread
 import time as t
 import sys
-import json
 import random
 import pickle
 
@@ -22,12 +21,12 @@ class Client:
 	def __init__(self, IS_BOOTSTRAP):
 		self.IS_BOOTSTRAP = IS_BOOTSTRAP
 		# Start an accept thread for incoming peers
+		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+		ACCEPT_THREAD.daemon = True
+		ACCEPT_THREAD.start()
+
 		if self.IS_BOOTSTRAP:
-			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-			ACCEPT_THREAD.daemon = True
-			ACCEPT_THREAD.start()
 			self.NICK = 'bootstrap'
-			ACCEPT_THREAD.join()
 
 		else:
 			self.peer_list['bootstrap'] = ('', None)
@@ -41,6 +40,7 @@ class Client:
 			MENU_THREAD.start()
 			MENU_THREAD.join()
 			
+		ACCEPT_THREAD.join()
 
 
 	#Function that starts a new thread for every new connection.
@@ -55,11 +55,12 @@ class Client:
 			try:
 				# Accepts incoming connection and adds it to peer list
 				peer_socket, peer_address = ACCEPT_SOCKET.accept()
-				print("%s:%s has connected" % peer_address)
+				ip, _ = peer_address
+				print("%s has connected" % ip)
 				msg = peer_socket.recv(self.BUFSIZ)
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
-				self.peer_list[nick] = (peer_address, peer_socket)
+				self.peer_list[nick] = (ip, peer_socket)
 				# Starts a handler for new peer
 				Thread(target=self.handle_peer_client, args=(nick,)).start()
 			except KeyboardInterrupt:
@@ -131,8 +132,8 @@ class Client:
 			if ans == 'q' or ans == 'Q':
 				return
 
-	def print_peer_list(self):
-		print(str(self.peer_list.keys()))
+	def print_peer_list(self):	
+		print(str(self.peer_list))
 	
 	def get_socket(self, nick):
 		if nick not in self.peer_list:
