@@ -22,19 +22,19 @@ class Client:
 	def __init__(self, IS_BOOTSTRAP):
 		self.IS_BOOTSTRAP = IS_BOOTSTRAP
 		# Start an accept thread for incoming peers
-	
+	        ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+		ACCEPT_THREAD.daemon = True
+		ACCEPT_THREAD.start()
 
 		if self.IS_BOOTSTRAP:
 			self.NICK = 'bootstrap'
-                        ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-		        ACCEPT_THREAD.daemon = True
-		        ACCEPT_THREAD.start()
+                        
 
 		else:
 			self.peer_list['bootstrap'] = ('130.243.177.171', None)
 			self.NICK = raw_input("What is your nick?")
 			# Initate contact with the bootstrap, send nick, and add to lists
-			#self.connect_to_peer('bootstrap')
+			self.connect_to_peer('bootstrap')
 
 			# Start a menu thread for client
 			MENU_THREAD = Thread(target=self.client_menu)
@@ -42,7 +42,7 @@ class Client:
 			MENU_THREAD.start()
 			MENU_THREAD.join()
 			
-		#ACCEPT_THREAD.join()
+		ACCEPT_THREAD.join()
 
 
 	#Function that starts a new thread for every new connection.
@@ -107,9 +107,15 @@ class Client:
 					if entry not in self.peer_list:
 						(peer, address) = entry
 						self.peer_list[peer] = (address, None)
-
+                        if flag == 'm':
+                                text, to_nick, from_nick = content
+                                self.user.add_recieved_text(text, from_nick)
+                                print "I recieved a message broo!"
 
         def send_message(self, text, from_nick, to_nick):
+                peer_socket = self.get_socket(to_nick)
+                msg = (text, from_nick, to_nick)
+                peer_socket.sendall(pickle.dumps('m', msg))
                 print("I am sending message: " + text)
 
 	def client_menu(self):
