@@ -4,9 +4,10 @@ import threading
 
 class User:
 
-    def __init__(self, nick):
+    def __init__(self, nick, client):
         self.nick = nick
         self.conversations = []
+        self.client = client
 
     def add_conversation(self, friend_nick, message_thread):
         self.conversations.append((friend_nick, message_thread))
@@ -33,10 +34,12 @@ class User:
          self.conversations.append((from_nick, new_message_thread))
          new_message_thread.decrypt_message_recieved(text, from_nick)
 
-    def add_text(self, text, from_nick):
+    def add_text(self, text, to_nick):
          for (user, conv) in self.conversations:
-            if user == from_nick:
+            if user == to_nick:
                 conv.decrypt_message_to_send
+                print("Does it work?")
+                self.client.send_message(text, to_nick)
                 
     def quit(self):
         for (user, conv) in self.conversations:
@@ -62,8 +65,8 @@ class Menu:
             friend_nick = raw_input("Who do you want to talk to?")
             return self.user.get_conversation(friend_nick)
 
-def loggin(nick):
-    us = User(nick)
+def loggin(nick, client):
+    us = User(nick, client)
     for files in os.listdir("./conversations"):
         for file in files:
             if file.endswith(us.nick + ".txt"):
@@ -83,6 +86,7 @@ def talk(user):
             choice = menu.dis_menu()
         else:            
             message = choice.encrypt_message_to_send(inp, choice.get_friend())
+            user.client.send_message(inp, user.nick, choice.get_friend)
             #TODO: send message to other client
 
 def listen(user):
@@ -94,9 +98,9 @@ def listen(user):
         
 
 
-def main():
+def main(client):
     nick = raw_input("What is your username?")
-    user = loggin(nick)
+    user = loggin(nick, client)
 
     thread2 = threading.Thread(target=listen, args=[user])
     #listen(user)
@@ -104,5 +108,4 @@ def main():
 
     talk(user)
     user.quit()
-main()
     
