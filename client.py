@@ -11,28 +11,33 @@ import menu as men
 class Client:
 	NICK = ''
 	HOST = ''
-	PORT = 33000
+	PORT = random.randint(32768, 65535.)
 	BUFSIZ = 4096
-	#ADDR = (HOST, PORT)
+	ADDR = (HOST, PORT)
+	PUBLIC_KEY = 1
 	IS_BOOTSTRAP = False
 
 	# Dictionary with nick as key, references IP and socket (if no connection established, socket is None)
+	# peer_list[nick] = (adr, listening_port, public_key, socket_object)
 	peer_list = {}
 
 	def __init__(self, IS_BOOTSTRAP):
 		self.IS_BOOTSTRAP = IS_BOOTSTRAP
 		# Start an accept thread for incoming peers
-	        ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-		ACCEPT_THREAD.daemon = True
-		ACCEPT_THREAD.start()
 
 		if self.IS_BOOTSTRAP:
 			self.NICK = 'bootstrap'
+			self.PORT = 33000
+			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+			ACCEPT_THREAD.daemon = True
+			ACCEPT_THREAD.start()
+			ACCEPT_THREAD.join()
                         
 
 		else:
-			self.peer_list['bootstrap'] = ('130.243.177.171', None)
+			self.peer_list['bootstrap'] = ('', 33000, self.PUBLIC_KEY, None)
 			self.NICK = raw_input("What is your nick?")
+			print("Your listening port is: " + str(self.PORT))
 			# Initate contact with the bootstrap, send nick, and add to lists
 			self.connect_to_peer('bootstrap')
 
@@ -42,7 +47,6 @@ class Client:
 			MENU_THREAD.start()
 			MENU_THREAD.join()
 			
-		ACCEPT_THREAD.join()
 
 
 	#Function that starts a new thread for every new connection.
@@ -62,7 +66,9 @@ class Client:
 				msg = peer_socket.recv(self.BUFSIZ)
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
-				self.peer_list[nick] = (ip, peer_socket)
+				listening_port = peer_socket.recv(self.BUFSIZ)
+				print("Listening port: " + listening_port)
+				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
 				# Starts a handler for new peer
 				Thread(target=self.handle_peer_client, args=(nick,)).start()
 			except KeyboardInterrupt:
@@ -74,11 +80,13 @@ class Client:
 		# Initate contact with the bootstrap, send nick, and add to lists
 		PEER_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		PEER_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
-		PEER_CONNECTION.connect((self.get_ip(nick), self.PORT))
-		t.sleep(.5)
+		address = (self.get_from_peer(nick, 'ip'), self.get_from_peer(nick, 'port'))
+		PEER_CONNECTION.connect(address)
+		self.update_peer(nick, 'socket', PEER_CONNECTION)
 		print("Sending nick: " + self.NICK)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
-		self.peer_list[nick] = (self.get_ip(nick), PEER_CONNECTION)
+		print("Sending listening port: " + str(self.PORT))
+		PEER_CONNECTION.sendall(pickle.dumps(self.PORT))
 		print("Connected to %s" % nick)
 
 		# Start a handler thread for peer
@@ -89,7 +97,7 @@ class Client:
 
 	def handle_peer_client(self, nick):
 		#Retreive the socket object via nick
-		peer_socket = self.get_socket(nick)
+		peer_socket = self.get_from_peer(nick, 'socket')
 		while True:
 			print("Waiting for messages...")
 			# Decoding the message
@@ -98,81 +106,71 @@ class Client:
 
 			# Send peer peer list
 			if flag == 'u':
-				data = ('p', self.create_peer_list())
+				data = ('p', self.peer_list)
 				peer_socket.sendall(pickle.dumps(data))
 			
 			# Accept incoming peer list, add peers that don't exist in peer list
 			if flag == 'p':
 				for entry in content:
 					if entry not in self.peer_list:
-						(peer, address) = entry
-						self.peer_list[peer] = (address, None)
-                        if flag == 'm':
-                                text, to_nick, from_nick = content
-                                self.user.add_recieved_text(text, from_nick)
-                                print "I recieved a message broo!"
+						self.peer_list[entry] = content[entry]
+		
+			if flag == 'm':
+					text, to_nick, from_nick = content
+					self.user.add_recieved_text(text, from_nick)
+					print "I recieved a message broo!"
 
-        def send_message(self, text, from_nick, to_nick):
-                peer_socket = self.get_socket(to_nick)
-                msg = (text, from_nick, to_nick)
-                peer_socket.sendall(pickle.dumps('m', msg))
-                print("I am sending message: " + text)
+	def send_message(self, text, from_nick, to_nick):
+			peer_socket = self.get_from_peer(to_nick, 'socket')
+			msg = (text, from_nick, to_nick)
+			peer_socket.sendall(pickle.dumps('m', msg))
+			print("I am sending message: " + text)
 
-	def client_menu(self):
-                self.user = men.User(self.NICK, self)
-                men.main(self.user)
-		"""while True:
-			print("[W]hos online?")
-			print("[U]pdate list")
-			print("[C]onnect to user")
-			print("[Q]uit")
-			ans = raw_input()
-			if ans == 'w' or ans == 'W':
-				self.print_peer_list()
-			if ans =='u' or ans == 'U':
-				print("Update in progress...")
-				b_socket = self.get_socket('bootstrap')
-				msg = pickle.dumps(('u', ''))
-				b_socket.sendall(msg)
 
-			if ans == 'c' or ans == 'C':
-				self.print_peer_list()
-				peer = raw_input("Who do you want to chat with?")
-				if peer in self.peer_list:
-					self.connect_to_peer(peer)
-				else:
-					print("User not found")
-			if ans == 'q' or ans == 'Q':
-				return"""
+	def get_from_peer(self, nick, argument):
+		(ip, listening_port, public_key, socket) = self.peer_list[nick]
+
+		switcher = {
+        	'ip': ip,
+        	'port': listening_port,
+			'key': public_key,
+			'socket': socket
+    	}
+		return switcher[argument]
+
+	def update_peer(self, nick, argument, new_value):
+		(ip, listening_port, public_key, socket) = self.peer_list[nick]
+		if argument == 'ip':
+			self.peer_list[nick] = (new_value, listening_port, public_key, socket)
+		elif argument == 'port':
+			self.peer_list[nick] = (ip, new_value, public_key, socket)
+		elif argument == 'key':
+			self.peer_list[nick] = (ip, listening_port, new_value, socket)
+		elif argument == 'socket':
+			self.peer_list[nick] = (ip, listening_port, public_key, new_value)
+		else:
+			print("Invalid argument")
+
+	def update_peer_list(self):
+		b_socket = self.get_from_peer('bootstrap', 'socket')
+		msg = pickle.dumps(('u', 'b'))
+		b_socket.sendall(msg)
 
 	def print_peer_list(self):	
 		print(str(self.peer_list))
-	
-	def get_socket(self, nick):
-		if nick not in self.peer_list:
-			return None
-		(_, socket) = self.peer_list[nick]
-		return socket
-	
-	def get_ip(self, nick):
-		(ip, _) = self.peer_list[nick]
-		return ip
 
-	def merge_peer_list(self, other_peer_list):
-		z = self.peer_list.copy()  
-		z.update(other_peer_list)
-		self.peer_list = z
-		
-	def create_peer_list(self):
-		new_list = []
-		for peer in self.peer_list:
-			new_list.append((peer, self.get_ip(peer)))
-		return new_list
+	def get_peers(self):
+		return self.peer_list.keys()
+
+	def client_menu(self):
+		self.user = men.User(self.NICK, self)
+		men.main(self.user)
 
 
 if __name__ == "__main__":
 	ans = raw_input("Are you bootstrap?")
 	if ans == 'y' or ans == 'Y':
-		Client(True)
+		c = Client(True)
+		
 	else:
 		Client(False)
