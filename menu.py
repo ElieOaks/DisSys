@@ -27,6 +27,7 @@ class User:
 		self.conversations.append((friend_nick, new_message_thread))
 		return new_message_thread
 
+
 	def add_recieved_text(self, text, from_nick):
 		 for (user, conv) in self.conversations:
 			if user == from_nick:
@@ -126,12 +127,6 @@ def listen(user):
 
 
 def main(user):
-	#user = loggin(user)
-
-	thread2 = threading.Thread(target=listen, args=[user])
-	#listen(user)
-	thread2.start()
-
 	talk(user)
 	user.quit()
 	
