@@ -65,7 +65,7 @@ class Client:
 				msg = peer_socket.recv(self.BUFSIZ)
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
-				listening_port = peer_socket.recv(self.BUFSIZ)
+				listening_port = peer_socket.recv(self.BUFSIZ).rstrip('\n')
 				print("Client's listening port: " + listening_port)
 				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
 				# Starts a handler for new peer
@@ -123,6 +123,11 @@ class Client:
 
 	def send_message(self, text, from_nick, to_nick):
 			peer_socket = self.get_from_peer(to_nick, 'socket')
+
+                        if peer_socket == None:
+                                self.connect_to_peer(to_nick)
+                                peer_socket = self.get_from_peer(to_nick, 'socket')
+                        
 			msg = (text, from_nick, to_nick)
 			peer_socket.sendall(pickle.dumps('m', msg))
 			print("I am sending message: " + text)

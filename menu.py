@@ -45,8 +45,8 @@ class User:
 	def add_text(self, text, to_nick):
 	        for (user, conv) in self.conversations:
 			if user == to_nick:
-				conv.decrypt_message_to_send(text, to_nick)
-				return self.client.send_message(text, to_nick)
+				conv.encrypt_message_to_send(text, to_nick)
+				return self.client.send_message(text, self.nick, to_nick)
 
 	def update_conversation_list(self):
 		friends = self.client.get_peers()
@@ -89,7 +89,7 @@ class Menu:
 				if not result:
 					print ("That friend is not online")
 				else:
-					return result
+					return friend_nick
 
 			elif inp =='u' or inp == 'U':
 				print("Update in progress...")
@@ -119,8 +119,11 @@ def talk(user):
 		if (inp == "menu"):
 			choice = menu.dis_menu()
 		else:              
-			#message = choice.encrypt_message_to_send(inp, choice.get_friend())
                         user.add_text(inp, choice)
+                        print("You are trying: ")
+                        print inp
+                        print user.nick
+                        print choice
 			user.client.send_message(str(inp), str(user.nick), str(choice))
 			#TODO: send message to other client
 
