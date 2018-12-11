@@ -40,8 +40,20 @@ class User:
 		 for (user, conv) in self.conversations:
 			if user == to_nick:
 				conv.decrypt_message_to_send
-				print("Does it work?")
 				self.client.send_message(text, to_nick)
+                 return False
+
+        def update_conversation_list(self):
+                friends = str(self.client.self.user.client.get_peers())
+                for friend in friends:
+                        x = False
+                        for user, conv in self.conversations:
+                                if friend == user:
+                                        x = True
+                        if not x:
+                                new_message_thread = mes.Message_Interface(self.nick, 0, 0, 0, friend)        
+		                self.conversations.append((friend, new_message_thread))
+                                
 				
 	def quit(self):
 		for (user, conv) in self.conversations:
@@ -67,12 +79,17 @@ class Menu:
 			elif (inp == 'O' or inp == 'o'):
 				self.user.print_conversation_holders()
 				friend_nick = raw_input("Who do you want to talk to?")
-				return self.user.get_conversation(friend_nick)
+                                result = self.user.get_conversation(friend_nick)
+                                if not result:
+                                   print ("That friend is not online")
+                                else:
+                                   return result
 			elif inp =='u' or inp == 'U':
 				print("Update in progress...")
 				self.user.client.update_peer_list()
 			elif inp == 'w' or inp == 'W':
-				print(str(self.user.client.get_peers()))
+				self.user.update_conversation_list()
+                                self.user.print_conversation_holders()
 
 
 def loggin(user):
