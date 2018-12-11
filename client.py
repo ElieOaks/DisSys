@@ -106,7 +106,8 @@ class Client:
 
 			# Send peer peer list
 			if flag == 'u':
-				data = ('p', self.peer_list)
+				payload = create_sendable_peer_list()
+				data = ('p', payload)
 				peer_socket.sendall(pickle.dumps(data))
 			
 			# Accept incoming peer list, add peers that don't exist in peer list
@@ -156,10 +157,20 @@ class Client:
 		msg = pickle.dumps(('u', 'b'))
 		b_socket.sendall(msg)
 
+	def create_sendable_peer_list(self):
+		copy = self.peer_list.copy()
+		for entry in copy:
+			copy[entry] = self.scrub_socket(copy[entry])
+	
+	def scrub_socket(self, entry):
+		(ip, port, key, socket) = entry
+		return (ip, port, key, None)
+
 	def print_peer_list(self):	
 		print(str(self.peer_list))
 
 	def get_peers(self):
+		self.update_peer_list()
 		return self.peer_list.keys()
 
 	def client_menu(self):

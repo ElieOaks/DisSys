@@ -23,9 +23,7 @@ class User:
 			if user == friend_nick:
 				conv.show_all_messages()
 				return conv
-		new_message_thread = mes.Message_Interface(self.nick, 0, 0, 0, friend_nick)        
-		self.conversations.append((friend_nick, new_message_thread))
-		return new_message_thread
+		return False
 
 
 	def add_recieved_text(self, text, from_nick):
@@ -42,19 +40,19 @@ class User:
 			if user == to_nick:
 				conv.decrypt_message_to_send
 				self.client.send_message(text, to_nick)
-                 return False
+				return False
 
-        def update_conversation_list(self):
-                friends = str(self.client.self.user.client.get_peers())
-                for friend in friends:
-                        x = False
-                        for user, conv in self.conversations:
-                                if friend == user:
-                                        x = True
-                        if not x:
-                                new_message_thread = mes.Message_Interface(self.nick, 0, 0, 0, friend)        
-		                self.conversations.append((friend, new_message_thread))
-                                
+	def update_conversation_list(self):
+		friends = self.client.get_peers()
+		for friend in friends:
+			x = False
+			for user, conv in self.conversations:
+				if friend == user:
+					x = True
+			if not x:
+				new_message_thread = mes.Message_Interface(self.nick, 0, 0, 0, friend)        
+				self.conversations.append((friend, new_message_thread))
+					
 				
 	def quit(self):
 		for (user, conv) in self.conversations:
@@ -78,19 +76,21 @@ class Menu:
 				self.user.quit()
 				return None
 			elif (inp == 'O' or inp == 'o'):
+				self.user.update_conversation_list()
 				self.user.print_conversation_holders()
 				friend_nick = raw_input("Who do you want to talk to?")
-                                result = self.user.get_conversation(friend_nick)
-                                if not result:
-                                   print ("That friend is not online")
-                                else:
-                                   return result
+				result = self.user.get_conversation(friend_nick)
+				if not result:
+					print ("That friend is not online")
+				else:
+					return result
+
 			elif inp =='u' or inp == 'U':
 				print("Update in progress...")
 				self.user.client.update_peer_list()
 			elif inp == 'w' or inp == 'W':
 				self.user.update_conversation_list()
-                                self.user.print_conversation_holders()
+				self.user.print_conversation_holders()
 
 
 def loggin(user):
