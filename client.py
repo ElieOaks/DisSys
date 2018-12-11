@@ -85,6 +85,7 @@ class Client:
 		self.update_peer(nick, 'socket', PEER_CONNECTION)
 		print("Sending nick: " + self.NICK)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
+                t.sleep(0.5)
 		print("Sending listening port: " + str(self.PORT))
 		PEER_CONNECTION.sendall(pickle.dumps(self.PORT))
 		print("Connected to %s" % nick)
@@ -106,7 +107,7 @@ class Client:
 
 			# Send peer peer list
 			if flag == 'u':
-				payload = create_sendable_peer_list()
+				payload = self.create_sendable_peer_list()
 				data = ('p', payload)
 				peer_socket.sendall(pickle.dumps(data))
 			
@@ -118,8 +119,8 @@ class Client:
 		
 			if flag == 'm':
 					text, to_nick, from_nick = content
+                                        print to_nick + " recieved a message from " + from_nick + ": " + text
 					self.user.add_recieved_text(text, from_nick)
-					print "I recieved a message broo!"
 
 	def send_message(self, text, from_nick, to_nick):
 			peer_socket = self.get_from_peer(to_nick, 'socket')
@@ -130,12 +131,14 @@ class Client:
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]
+                print "You are trying to get from peer: ",
+                print str(ip) + ", " + str(listening_port) + ", " + str(public_key) + ", " + str(socket)
 
 		switcher = {
         	'ip': ip,
         	'port': listening_port,
-			'key': public_key,
-			'socket': socket
+		'key': public_key,
+		'socket': socket
     	}
 		return switcher[argument]
 
@@ -161,6 +164,7 @@ class Client:
 		copy = self.peer_list.copy()
 		for entry in copy:
 			copy[entry] = self.scrub_socket(copy[entry])
+                return copy
 	
 	def scrub_socket(self, entry):
 		(ip, port, key, socket) = entry
@@ -175,7 +179,7 @@ class Client:
 
 	def client_menu(self):
 		self.user = men.User(self.NICK, self)
-		men.main(self.user)
+                men.main(self.user)
 
 
 if __name__ == "__main__":

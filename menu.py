@@ -10,8 +10,9 @@ class User:
 		self.nick = nick
 		self.conversations = []
 		self.client = client
+                self.message = []
 
-	def add_conversation(self, friend_nick, message_thread):
+	def add_conversation(self, friend_nick, message_thread):  
 		self.conversations.append((friend_nick, message_thread))
 
 	def print_conversation_holders(self):
@@ -22,7 +23,13 @@ class User:
 		for (user, conv) in self.conversations:
 			if user == friend_nick:
 				conv.show_all_messages()
-				return conv
+				return conv 
+		return False
+        def get_friend(self, friend_nick):
+		for (user, conv) in self.conversations:
+			if user == friend_nick:
+				conv.show_all_messages()
+				return user
 		return False
 
 
@@ -36,11 +43,10 @@ class User:
 		 new_message_thread.decrypt_message_recieved(text, from_nick)
 
 	def add_text(self, text, to_nick):
-		 for (user, conv) in self.conversations:
+	        for (user, conv) in self.conversations:
 			if user == to_nick:
-				conv.decrypt_message_to_send
-				self.client.send_message(text, to_nick)
-				return False
+				conv.decrypt_message_to_send(text, to_nick)
+				return self.client.send_message(text, to_nick)
 
 	def update_conversation_list(self):
 		friends = self.client.get_peers()
@@ -112,9 +118,10 @@ def talk(user):
 		inp = raw_input(">>  ")
 		if (inp == "menu"):
 			choice = menu.dis_menu()
-		else:            
-			message = choice.encrypt_message_to_send(inp, choice.get_friend())
-			user.client.send_message(inp, user.nick, choice.get_friend)
+		else:              
+			#message = choice.encrypt_message_to_send(inp, choice.get_friend())
+                        user.add_text(inp, choice)
+			user.client.send_message(str(inp), str(user.nick), str(choice))
 			#TODO: send message to other client
 
 def listen(user):
