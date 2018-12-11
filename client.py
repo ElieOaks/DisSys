@@ -5,7 +5,7 @@ from threading import Thread
 import time as t
 import sys
 import random
-import pickle
+import cPickle as pickle
 import menu as men
 
 class Client:
@@ -65,8 +65,11 @@ class Client:
 				msg = peer_socket.recv(self.BUFSIZ)
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
-				listening_port = peer_socket.recv(self.BUFSIZ).rstrip('\n')
-				print("Client's listening port: " + listening_port)
+				listening_port = peer_socket.recv(self.BUFSIZ)
+				listening_port = listening_port[1:5]
+				#listening_port = listening_port.rstrip('\n')
+				listening_port = int(listening_port)
+				print("Client's listening port: " + str(listening_port))
 				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
 				# Starts a handler for new peer
 				Thread(target=self.handle_peer_client, args=(nick,)).start()
@@ -83,7 +86,7 @@ class Client:
 		PEER_CONNECTION.connect(address)
 		self.update_peer(nick, 'socket', PEER_CONNECTION)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
-                t.sleep(0.5)
+		t.sleep(0.5)
 		print("Sending listening port: " + str(self.PORT))
 		PEER_CONNECTION.sendall(pickle.dumps(self.PORT))
 		print("Connected to %s" % nick)
