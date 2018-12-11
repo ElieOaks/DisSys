@@ -37,7 +37,6 @@ class Client:
 		else:
 			self.peer_list['bootstrap'] = ('', 33000, self.PUBLIC_KEY, None)
 			self.NICK = raw_input("What is your nick?")
-			print("Your listening port is: " + str(self.PORT))
 			# Initate contact with the bootstrap, send nick, and add to lists
 			self.connect_to_peer('bootstrap')
 
@@ -67,7 +66,7 @@ class Client:
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
 				listening_port = peer_socket.recv(self.BUFSIZ)
-				print("Listening port: " + listening_port)
+				print("Client's listening port: " + listening_port)
 				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
 				# Starts a handler for new peer
 				Thread(target=self.handle_peer_client, args=(nick,)).start()
@@ -83,9 +82,8 @@ class Client:
 		address = (self.get_from_peer(nick, 'ip'), self.get_from_peer(nick, 'port'))
 		PEER_CONNECTION.connect(address)
 		self.update_peer(nick, 'socket', PEER_CONNECTION)
-		print("Sending nick: " + self.NICK)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
-		print("Sending listening port: " + str(self.PORT))
+		t.sleep(0.5)
 		PEER_CONNECTION.sendall(pickle.dumps(self.PORT))
 		print("Connected to %s" % nick)
 
@@ -106,12 +104,13 @@ class Client:
 
 			# Send peer peer list
 			if flag == 'u':
-				payload = create_sendable_peer_list()
+				payload = self.create_sendable_peer_list()
 				data = ('p', payload)
 				peer_socket.sendall(pickle.dumps(data))
 			
 			# Accept incoming peer list, add peers that don't exist in peer list
 			if flag == 'p':
+				print("I received a peer list: " + str(content))
 				for entry in content:
 					if entry not in self.peer_list:
 						self.peer_list[entry] = content[entry]
@@ -161,6 +160,7 @@ class Client:
 		copy = self.peer_list.copy()
 		for entry in copy:
 			copy[entry] = self.scrub_socket(copy[entry])
+		return copy
 	
 	def scrub_socket(self, entry):
 		(ip, port, key, socket) = entry
