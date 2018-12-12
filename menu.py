@@ -58,8 +58,7 @@ class User:
 			if not x:
 				new_message_thread = mes.Message_Interface(self.nick, 0, 0, 0, friend)        
 				self.conversations.append((friend, new_message_thread))
-					
-				
+					       
 	def quit(self):
 		for (user, conv) in self.conversations:
 			print user
@@ -101,17 +100,19 @@ class Menu:
 
 def loggin(user):
 	us = user
-	for files in os.listdir("./conversations"):
-		for file in files:
-			if file.endswith(us.nick + ".txt"):
-				new_message_thread = mes.Message_Interface(nick, 0, 0, 0, "temp")
-				friend_nick = new_message_thread.recover_local_state(file)
-				if (result != -1):
-					user.add_conversation(friend_nick, new_message_thread)
+	for file in os.listdir("./conversations"):
+		if file.endswith(us.nick + ".txt"):
+                        friend_nick = str(file).rstrip(us.nick + ".txt")
+                        print ("File name has friend: " + friend_nick)
+			new_message_thread = mes.Message_Interface(us.nick, 0, 0, 0, friend_nick)
+			success = new_message_thread.recover_local_state(friend_nick)
+			if (success != -1):
+				user.add_conversation(friend_nick, new_message_thread)
 	return us
 
 def talk(user):
 	menu = Menu(user)
+        loggin(user)
 	choice = menu.dis_menu()
 
 	while(choice != None):
@@ -125,14 +126,6 @@ def talk(user):
                         print user.nick
                         print choice
 			user.client.send_message(str(inp), str(user.nick), str(choice))
-			#TODO: send message to other client
-
-def listen(user):
-	i = 100000000
-	while(i > 0):
-		if (i == 5 or i == 10000):
-			user.add_recieved_text("Can you not read my messages?", "Hanna")
-		i = i-1
 		
 
 

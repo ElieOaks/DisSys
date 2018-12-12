@@ -1,5 +1,6 @@
 import text_messages as mes
 import text as tx
+from os.path import join as pjoin
 
 class Message_Interface:
 
@@ -45,7 +46,8 @@ class Message_Interface:
 
     #saves all the messages to a local file called nick.txt
     def save_state_local(self, friend_nick):
-        name = ".\conversations\\" + friend_nick + self.nick + ".txt"
+        filename = friend_nick + self.nick + ".txt"
+        name = pjoin("./conversations", filename)
         print name
         f= open(name,"w+")
         f.write("%s\n" % self.nick)
@@ -57,9 +59,11 @@ class Message_Interface:
         f.close()
 
     # Loads messages from local file called nick.txt
-    def recover_local_state(self, file):
+    def recover_local_state(self, friend_nick):
+        filename = friend_nick + self.nick + ".txt"
+        name = pjoin("./conversations", filename)
         try:
-            f = open(file, "r")      
+            f = open(name, "r")      
 
             self.nick = f.readline().rstrip('\n')
             self.__pri_key = int(f.readline().rstrip('\n'))
@@ -75,3 +79,4 @@ class Message_Interface:
         except:
             print("recovering state failed!")
             return -1
+
