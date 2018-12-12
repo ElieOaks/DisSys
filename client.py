@@ -47,10 +47,9 @@ class Client:
 		ACCEPT_SOCKET.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
 		ACCEPT_SOCKET.bind((self.HOST, self.PORT))
 		ACCEPT_SOCKET.listen(5)
-		print("Waiting for connection...")
 		while True:
 			try:
-				# Accepts incoming connection and adds it to peer list
+				# Accepts incoming connection, receives nick and listening port 
 				peer_socket, peer_address = ACCEPT_SOCKET.accept()
 				ip, _ = peer_address
 				print("%s has connected" % ip)
@@ -58,13 +57,15 @@ class Client:
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
 				listening_port = peer_socket.recv(self.BUFSIZ)
-				listening_port = listening_port[1:5]
-				#listening_port = listening_port.rstrip('\n')
+				listening_port = listening_port[1:6]
 				listening_port = int(listening_port)
 				print("Client's listening port: " + str(listening_port))
 				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
+
 				# Starts a handler for new peer
-				Thread(target=self.handle_peer_client, args=(nick,)).start()
+				PEER_HANDLER = Thread(target=self.handle_peer_client, args=(nick,))
+				PEER_HANDLER.daemon = True
+				PEER_HANDLER.start()
 			except KeyboardInterrupt:
 				print("Failed to connect to a client")
 				ACCEPT_SOCKET.close()
@@ -75,11 +76,11 @@ class Client:
 		PEER_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		PEER_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
 		address = (self.get_from_peer(nick, 'ip'), self.get_from_peer(nick, 'port'))
+		print("Trying to connect to: " + str(address))
 		PEER_CONNECTION.connect(address)
 		self.update_peer(nick, 'socket', PEER_CONNECTION)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
-		t.sleep(0.5)
-		print("Sending listening port: " + str(self.PORT))
+		t.sleep(0.3)
 		PEER_CONNECTION.sendall(pickle.dumps(self.PORT))
 		print("Connected to %s" % nick)
 
@@ -93,7 +94,6 @@ class Client:
 		#Retreive the socket object via nick
 		peer_socket = self.get_from_peer(nick, 'socket')
 		while True:
-			print("Waiting for messages...")
 			# Decoding the message
 			payload = peer_socket.recv(self.BUFSIZ)
 			(flag, content) = pickle.loads(payload)
@@ -106,14 +106,13 @@ class Client:
 			
 			# Accept incoming peer list, add peers that don't exist in peer list
 			if flag == 'p':
-				print("I received a peer list: " + str(content))
 				for entry in content:
 					if entry not in self.peer_list:
 						self.peer_list[entry] = content[entry]
 		
 			if flag == 'm':
-				text, to_nick, from_nick = content
-				print to_nick + " recieved a message from " + from_nick + ": " + text
+				text, from_nick, to_nick = content
+				print(to_nick + " recieved a message from " + from_nick + ": " + text)
 				self.user.add_recieved_text(text, from_nick)
 
 	def send_message(self, text, from_nick, to_nick):
@@ -121,16 +120,13 @@ class Client:
 		if peer_socket == None:
 			self.connect_to_peer(to_nick)
 			peer_socket = self.get_from_peer(to_nick, 'socket')
-                        
+		
 		msg = (text, from_nick, to_nick)
-		peer_socket.sendall(pickle.dumps('m', msg))
-		print("I am sending message: " + text)
-
+		data = ('m', msg)
+		peer_socket.sendall(pickle.dumps(data))
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]
-		print "You are trying to get from peer: ",
-		print str(ip) + ", " + str(listening_port) + ", " + str(public_key) + ", " + str(socket)
 		switcher = {
         	'ip': ip,
         	'port': listening_port,
@@ -139,6 +135,8 @@ class Client:
     	}
 		return switcher[argument]
 
+	# Helper function that updates a given argument with new_value.
+	# for example, update_peer("Joha", "ip" "130...."), will update Joha's ip with the new value
 	def update_peer(self, nick, argument, new_value):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]
 		if argument == 'ip':
@@ -152,6 +150,7 @@ class Client:
 		else:
 			print("Invalid argument")
 
+	# Sends an update request to bootstrap
 	def update_peer_list(self):
 		b_socket = self.get_from_peer('bootstrap', 'socket')
 		msg = pickle.dumps(('u', 'b'))

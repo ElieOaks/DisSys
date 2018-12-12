@@ -27,7 +27,7 @@ class Bootstrap:
 		ACCEPT_THREAD.join()
 
 
-	#Function that starts a new thread for every new connection.
+	##Function that starts a new thread for every new connection.
 	def accept_incoming_connections(self):
 		"""Sets up handling for incoming clients."""
 		ACCEPT_SOCKET = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
@@ -37,7 +37,7 @@ class Bootstrap:
 		print("Waiting for connection...")
 		while True:
 			try:
-				# Accepts incoming connection and adds it to peer list
+				# Accepts incoming connection and receives nick, listening port and starts a handler thread
 				peer_socket, peer_address = ACCEPT_SOCKET.accept()
 				ip, _ = peer_address
 				print("%s has connected" % ip)
@@ -45,15 +45,16 @@ class Bootstrap:
 				nick = pickle.loads(msg)
 				print("Nick: " + nick)
 				listening_port = peer_socket.recv(self.BUFSIZ)
-				listening_port = listening_port[1:5]
-				#listening_port = listening_port.rstrip('\n')
+				listening_port = listening_port[1:6]
 				listening_port = int(listening_port)
 				print("Client's listening port: " + str(listening_port))
 				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
 				# Starts a handler for new peer
-				Thread(target=self.handle_peer_bootstrap, args=(nick,)).start()
+				PEER_HANDLER = Thread(target=self.handle_peer_bootstrap, args=(nick,))
+				PEER_HANDLER.daemon = True
+				PEER_HANDLER.start()
 			except KeyboardInterrupt:
-				print("Failed to connect to a client")
+				print("Aborting mission!")
 				ACCEPT_SOCKET.close()
 				return
 
@@ -61,8 +62,8 @@ class Bootstrap:
 	def handle_peer_bootstrap(self, nick):
 		#Retreive the socket object via nick
 		peer_socket = self.get_from_peer(nick, 'socket')
+		print("Waiting for messages...")
 		while True:
-			print("Waiting for messages...")
 			# Decoding the message
 			payload = peer_socket.recv(self.BUFSIZ)
 			(flag, content) = pickle.loads(payload)
@@ -75,15 +76,12 @@ class Bootstrap:
 			
 			# Accept incoming peer list, add peers that don't exist in peer list
 			if flag == 'p':
-				print("I received a peer list: " + str(content))
 				for entry in content:
 					if entry not in self.peer_list:
 						self.peer_list[entry] = content[entry]
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]
-		print "You are trying to get from peer: ",
-		print str(ip) + ", " + str(listening_port) + ", " + str(public_key) + ", " + str(socket)
 		switcher = {
 			'ip': ip,
 			'port': listening_port,
