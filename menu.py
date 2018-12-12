@@ -119,11 +119,11 @@ def talk(user):
 		if (inp == "menu"):
 			choice = menu.dis_menu()
 		else:              
-                        user.add_text(inp, choice)
-                        print("You are trying: ")
-                        print inp
-                        print user.nick
-                        print choice
+			user.add_text(inp, choice)
+			print("You are trying: ")
+			print inp
+			print user.nick
+			print choice
 			user.client.send_message(str(inp), str(user.nick), str(choice))
 			#TODO: send message to other client
 
