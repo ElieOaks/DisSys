@@ -22,23 +22,25 @@ class Client:
 	peer_list = {}
 
 	def __init__(self):
-		self.peer_list['bootstrap'] = ('', 33000, self.PUBLIC_KEY, None)
-		self.NICK = raw_input("What is your nick?")
+		try:
+			self.peer_list['bootstrap'] = ('', 33000, self.PUBLIC_KEY, None)
+			self.NICK = raw_input("What is your nick?")
 
-		# Initate contact with the bootstrap, send nick, and add to lists
-		self.connect_to_peer('bootstrap')
+			# Initate contact with the bootstrap, send nick, and add to lists
+			self.connect_to_peer('bootstrap')
 
-		# Start a menu thread for client
-		MENU_THREAD = Thread(target=self.client_menu)
-		MENU_THREAD.daemon = True
-		MENU_THREAD.start()
-		
-		#Start a thread for accepting incoming peers
-		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-		ACCEPT_THREAD.daemon = True
-		ACCEPT_THREAD.start()
-		ACCEPT_THREAD.join()
-
+			# Start a menu thread for client
+			MENU_THREAD = Thread(target=self.client_menu)
+			MENU_THREAD.daemon = True
+			MENU_THREAD.start()
+			
+			#Start a thread for accepting incoming peers
+			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+			ACCEPT_THREAD.daemon = True
+			ACCEPT_THREAD.start()
+			while True: t.sleep(100)
+		except (KeyboardInterrupt, SystemExit):
+			print("Aborting mission!")
 
 	#Function that starts a new thread for every new connection.
 	def accept_incoming_connections(self):
@@ -94,26 +96,30 @@ class Client:
 		#Retreive the socket object via nick
 		peer_socket = self.get_from_peer(nick, 'socket')
 		while True:
-			# Decoding the message
-			payload = peer_socket.recv(self.BUFSIZ)
-			(flag, content) = pickle.loads(payload)
+			try:
+				# Decoding the message
+				payload = peer_socket.recv(self.BUFSIZ)
+				(flag, content) = pickle.loads(payload)
 
-			# Send peer peer list
-			if flag == 'u':
-				payload = self.create_sendable_peer_list()
-				data = ('p', payload)
-				peer_socket.sendall(pickle.dumps(data))
+				# Send peer peer list
+				if flag == 'u':
+					payload = self.create_sendable_peer_list()
+					data = ('p', payload)
+					peer_socket.sendall(pickle.dumps(data))
+				
+				# Accept incoming peer list, add peers that don't exist in peer list
+				if flag == 'p':
+					for entry in content:
+						if entry not in self.peer_list:
+							self.peer_list[entry] = content[entry]
 			
-			# Accept incoming peer list, add peers that don't exist in peer list
-			if flag == 'p':
-				for entry in content:
-					if entry not in self.peer_list:
-						self.peer_list[entry] = content[entry]
-		
-			if flag == 'm':
-				text, from_nick, to_nick = content
-				print(to_nick + " recieved a message from " + from_nick + ": " + text)
-				self.user.add_recieved_text(text, from_nick)
+				if flag == 'm':
+					text, from_nick, to_nick = content
+					print(to_nick + " recieved a message from " + from_nick + ": " + text)
+					self.user.add_recieved_text(text, from_nick)
+			except KeyboardInterrupt:
+				print("Aborting mission!")
+				peer_socket.close()
 
 	def send_message(self, text, from_nick, to_nick):
 		peer_socket = self.get_from_peer(to_nick, 'socket')

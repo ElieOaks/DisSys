@@ -21,10 +21,13 @@ class Bootstrap:
 	peer_list = {}
 
 	def __init__(self):			
-		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-		ACCEPT_THREAD.daemon = True
-		ACCEPT_THREAD.start()
-		ACCEPT_THREAD.join()
+		try:
+			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+			ACCEPT_THREAD.daemon = True
+			ACCEPT_THREAD.start()
+			while True: t.sleep(100)
+		except (KeyboardInterrupt, SystemExit):
+			print("Aborting mission!")
 
 
 	##Function that starts a new thread for every new connection.
@@ -64,21 +67,25 @@ class Bootstrap:
 		peer_socket = self.get_from_peer(nick, 'socket')
 		print("Waiting for messages...")
 		while True:
-			# Decoding the message
-			payload = peer_socket.recv(self.BUFSIZ)
-			(flag, content) = pickle.loads(payload)
+			try:
+				# Decoding the message
+				payload = peer_socket.recv(self.BUFSIZ)
+				(flag, content) = pickle.loads(payload)
 
-			# Send peer peer list
-			if flag == 'u':
-				payload = self.create_sendable_peer_list()
-				data = ('p', payload)
-				peer_socket.sendall(pickle.dumps(data))
-			
-			# Accept incoming peer list, add peers that don't exist in peer list
-			if flag == 'p':
-				for entry in content:
-					if entry not in self.peer_list:
-						self.peer_list[entry] = content[entry]
+				# Send peer peer list
+				if flag == 'u':
+					payload = self.create_sendable_peer_list()
+					data = ('p', payload)
+					peer_socket.sendall(pickle.dumps(data))
+				
+				# Accept incoming peer list, add peers that don't exist in peer list
+				if flag == 'p':
+					for entry in content:
+						if entry not in self.peer_list:
+							self.peer_list[entry] = content[entry]
+			except KeyboardInterrupt:
+				print("Aborting missions!")
+				peer_socket.close()
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]

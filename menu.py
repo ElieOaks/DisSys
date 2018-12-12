@@ -3,6 +3,7 @@ import os
 import threading
 import pickle
 import client
+import time as t
 
 class User:
 
@@ -83,6 +84,7 @@ class Menu:
 				return None
 			elif (inp == 'O' or inp == 'o'):
 				self.user.update_conversation_list()
+				t.sleep(0.3)
 				self.user.print_conversation_holders()
 				friend_nick = raw_input("Who do you want to talk to?")
 				result = self.user.get_conversation(friend_nick)
