@@ -51,7 +51,7 @@ class Bootstrap:
 				print("Client's listening port: " + str(listening_port))
 				self.peer_list[nick] = (ip, listening_port, self.PUBLIC_KEY, peer_socket)
 				# Starts a handler for new peer
-				Thread(target=self.handle_peer_client, args=(nick,)).start()
+				Thread(target=self.handle_peer_bootstrap, args=(nick,)).start()
 			except KeyboardInterrupt:
 				print("Failed to connect to a client")
 				ACCEPT_SOCKET.close()
