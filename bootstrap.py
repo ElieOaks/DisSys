@@ -54,7 +54,7 @@ class Bootstrap:
 				PEER_HANDLER.daemon = True
 				PEER_HANDLER.start()
 			except KeyboardInterrupt:
-				print("Failed to connect to a client")
+				print("Aborting mission!")
 				ACCEPT_SOCKET.close()
 				return
 

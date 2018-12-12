@@ -80,7 +80,7 @@ class Client:
 		PEER_CONNECTION.connect(address)
 		self.update_peer(nick, 'socket', PEER_CONNECTION)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
-		t.sleep(0.5)
+		t.sleep(0.3)
 		PEER_CONNECTION.sendall(pickle.dumps(self.PORT))
 		print("Connected to %s" % nick)
 
