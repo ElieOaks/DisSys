@@ -21,31 +21,23 @@ class Client:
 	# peer_list[nick] = (adr, listening_port, public_key, socket_object)
 	peer_list = {}
 
-	def __init__(self, IS_BOOTSTRAP):
-		self.IS_BOOTSTRAP = IS_BOOTSTRAP
-		# Start an accept thread for incoming peers
+	def __init__(self):
+		self.peer_list['bootstrap'] = ('', 33000, self.PUBLIC_KEY, None)
+		self.NICK = raw_input("What is your nick?")
 
-		if self.IS_BOOTSTRAP:
-			self.NICK = 'bootstrap'
-			self.PORT = 33000
-			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-			ACCEPT_THREAD.daemon = True
-			ACCEPT_THREAD.start()
-			ACCEPT_THREAD.join()
-                        
+		# Initate contact with the bootstrap, send nick, and add to lists
+		self.connect_to_peer('bootstrap')
 
-		else:
-			self.peer_list['bootstrap'] = ('', 33000, self.PUBLIC_KEY, None)
-			self.NICK = raw_input("What is your nick?")
-			# Initate contact with the bootstrap, send nick, and add to lists
-			self.connect_to_peer('bootstrap')
-
-			# Start a menu thread for client
-			MENU_THREAD = Thread(target=self.client_menu)
-			MENU_THREAD.daemon = True
-			MENU_THREAD.start()
-			MENU_THREAD.join()
-			
+		# Start a menu thread for client
+		MENU_THREAD = Thread(target=self.client_menu)
+		MENU_THREAD.daemon = True
+		MENU_THREAD.start()
+		
+		#Start a thread for accepting incoming peers
+		ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+		ACCEPT_THREAD.daemon = True
+		ACCEPT_THREAD.start()
+		ACCEPT_THREAD.join()
 
 
 	#Function that starts a new thread for every new connection.
@@ -120,32 +112,30 @@ class Client:
 						self.peer_list[entry] = content[entry]
 		
 			if flag == 'm':
-					text, to_nick, from_nick = content
-                                        print to_nick + " recieved a message from " + from_nick + ": " + text
-					self.user.add_recieved_text(text, from_nick)
+				text, to_nick, from_nick = content
+				print to_nick + " recieved a message from " + from_nick + ": " + text
+				self.user.add_recieved_text(text, from_nick)
 
 	def send_message(self, text, from_nick, to_nick):
+		peer_socket = self.get_from_peer(to_nick, 'socket')
+		if peer_socket == None:
+			self.connect_to_peer(to_nick)
 			peer_socket = self.get_from_peer(to_nick, 'socket')
-
-                        if peer_socket == None:
-                                self.connect_to_peer(to_nick)
-                                peer_socket = self.get_from_peer(to_nick, 'socket')
                         
-			msg = (text, from_nick, to_nick)
-			peer_socket.sendall(pickle.dumps('m', msg))
-			print("I am sending message: " + text)
+		msg = (text, from_nick, to_nick)
+		peer_socket.sendall(pickle.dumps('m', msg))
+		print("I am sending message: " + text)
 
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]
-                print "You are trying to get from peer: ",
-                print str(ip) + ", " + str(listening_port) + ", " + str(public_key) + ", " + str(socket)
-
+		print "You are trying to get from peer: ",
+		print str(ip) + ", " + str(listening_port) + ", " + str(public_key) + ", " + str(socket)
 		switcher = {
         	'ip': ip,
         	'port': listening_port,
-		'key': public_key,
-		'socket': socket
+			'key': public_key,
+			'socket': socket
     	}
 		return switcher[argument]
 
@@ -171,8 +161,7 @@ class Client:
 		copy = self.peer_list.copy()
 		for entry in copy:
 			copy[entry] = self.scrub_socket(copy[entry])
-
-                return copy
+		return copy
         
 	def scrub_socket(self, entry):
 		(ip, port, key, socket) = entry
@@ -191,9 +180,4 @@ class Client:
 
 
 if __name__ == "__main__":
-	ans = raw_input("Are you bootstrap?")
-	if ans == 'y' or ans == 'Y':
-		c = Client(True)
-		
-	else:
-		Client(False)
+	Client()
