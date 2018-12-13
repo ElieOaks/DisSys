@@ -120,6 +120,10 @@ class Client:
 			except KeyboardInterrupt:
 				print("Aborting mission!")
 				peer_socket.close()
+			except EOFError:
+				peer_socket.close()
+				print("Lost connected with %s" %nick)
+				return
 
 	def send_message(self, text, from_nick, to_nick):
 		peer_socket = self.get_from_peer(to_nick, 'socket')

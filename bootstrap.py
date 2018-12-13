@@ -86,6 +86,10 @@ class Bootstrap:
 			except KeyboardInterrupt:
 				print("Aborting missions!")
 				peer_socket.close()
+			except EOFError:
+				peer_socket.close()
+				print("%s disconnected" %nick)
+				return
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]
