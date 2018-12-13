@@ -53,10 +53,11 @@ class User:
 		friends = self.client.get_peers()
 		for friend in friends:
 			x = False
-			for user, conv in self.conversations:
+                        if friend != "bootstrap" or friend != self.nick:
+			   for user, conv in self.conversations:
 				if friend == user:
 					x = True
-			if not x:
+	                   if not x:
 				new_message_thread = mes.Message_Interface(self.nick, 0, 0, 0, friend)        
 				self.conversations.append((friend, new_message_thread))
 					       
@@ -83,12 +84,14 @@ class Menu:
 				return None
 			elif (inp == 'O' or inp == 'o'):
 				self.user.update_conversation_list()
-				t.sleep(0.3)
+				t.sleep(3)
 				self.user.print_conversation_holders()
 				friend_nick = raw_input("Who do you want to talk to?")
 				result = self.user.get_conversation(friend_nick)
 				if not result:
 					print ("That friend is not online")
+                                elif (friend_nick == self.nick or friend_nick == "bootstrap"):
+                                        print "This is for conversations, not notes."
 				else:
 					return friend_nick
 
@@ -123,11 +126,6 @@ def talk(user):
 			choice = menu.dis_menu()
 		else:              
 			user.add_text(inp, choice)
-			print("You are trying: ")
-			print inp
-			print user.nick
-			print choice
-			user.client.send_message(str(inp), str(user.nick), str(choice))
 		
 
 

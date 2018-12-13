@@ -76,7 +76,7 @@ class Client:
 		PEER_CONNECTION = sock.socket(sock.AF_INET, sock.SOCK_STREAM)
 		PEER_CONNECTION.setsockopt(sock.SOL_SOCKET, sock.SO_REUSEADDR, 1)
 		address = (self.get_from_peer(nick, 'ip'), self.get_from_peer(nick, 'port'))
-		print("Trying to connect to: " + str(address))
+		#print("Trying to connect to: " + str(address))
 		PEER_CONNECTION.connect(address)
 		self.update_peer(nick, 'socket', PEER_CONNECTION)
 		PEER_CONNECTION.sendall(pickle.dumps(self.NICK))
