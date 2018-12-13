@@ -6,7 +6,6 @@ import time as t
 import sys
 import random
 import cPickle as pickle
-import menu as men
 
 class Bootstrap:
 	NICK = ''
@@ -86,6 +85,10 @@ class Bootstrap:
 			except KeyboardInterrupt:
 				print("Aborting missions!")
 				peer_socket.close()
+			except EOFError:
+				peer_socket.close()
+				print("Client %s disonnected" %nick)
+				return
 
 	def get_from_peer(self, nick, argument):
 		(ip, listening_port, public_key, socket) = self.peer_list[nick]

@@ -28,17 +28,15 @@ class Client:
 
 			# Initate contact with the bootstrap, send nick, and add to lists
 			self.connect_to_peer('bootstrap')
+			#Start a thread for accepting incoming peers
+			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
+			ACCEPT_THREAD.daemon = True
+			ACCEPT_THREAD.start()
 
 			# Start a menu thread for client
 			MENU_THREAD = Thread(target=self.client_menu)
 			MENU_THREAD.daemon = True
 			MENU_THREAD.start()
-			
-			#Start a thread for accepting incoming peers
-			ACCEPT_THREAD = Thread(target=self.accept_incoming_connections)
-			ACCEPT_THREAD.daemon = True
-			ACCEPT_THREAD.start()
-			while True: t.sleep(100)
 		except (KeyboardInterrupt, SystemExit):
 			print("Aborting mission!")
 
@@ -120,6 +118,10 @@ class Client:
 			except KeyboardInterrupt:
 				print("Aborting mission!")
 				peer_socket.close()
+			except EOFError:
+				peer_socket.close()
+				print("Lost connection to %s" %nick)
+				return
 
 	def send_message(self, text, from_nick, to_nick):
 		peer_socket = self.get_from_peer(to_nick, 'socket')
@@ -181,7 +183,7 @@ class Client:
 
 	def client_menu(self):
 		self.user = men.User(self.NICK, self)
-                men.main(self.user)
+        men.main(self.user)
 
 
 if __name__ == "__main__":

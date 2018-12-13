@@ -11,7 +11,7 @@ class User:
 		self.nick = nick
 		self.conversations = []
 		self.client = client
-                self.message = []
+        self.message = []
 
 	def add_conversation(self, friend_nick, message_thread):  
 		self.conversations.append((friend_nick, message_thread))
@@ -104,8 +104,8 @@ def loggin(user):
 	us = user
 	for file in os.listdir("./conversations"):
 		if file.endswith(us.nick + ".txt"):
-                        friend_nick = str(file).rstrip(us.nick + ".txt")
-                        print ("File name has friend: " + friend_nick)
+			friend_nick = str(file).rstrip(us.nick + ".txt")
+			print ("File name has friend: " + friend_nick)
 			new_message_thread = mes.Message_Interface(us.nick, 0, 0, 0, friend_nick)
 			success = new_message_thread.recover_local_state(friend_nick)
 			if (success != -1):
@@ -114,7 +114,7 @@ def loggin(user):
 
 def talk(user):
 	menu = Menu(user)
-        loggin(user)
+	loggin(user)
 	choice = menu.dis_menu()
 
 	while(choice != None):
